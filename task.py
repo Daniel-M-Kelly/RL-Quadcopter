@@ -26,22 +26,28 @@ class Task():
         # Goal
         self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.]) 
 
+    def get_distance(self, pose, target_pos):
+        if abs(pose - target_pos):
+            distance = -np.log2(abs(pose - target_pos)) 
+        else:
+             distance = 0
+       
+        return (distance + target_pos) 
+
     def get_reward(self):
         """Uses current pose of sim to return reward."""
         #reward = 1.-.3*(abs(self.sim.pose[:3] - self.target_pos)).sum()
 
-        x_distance = abs(self.sim.pose[0] - self.target_pos[0])
-        y_distance = abs(self.sim.pose[1] - self.target_pos[1])
-        z_distance = abs(self.sim.pose[2] - self.target_pos[2])
-
-
-
-        reward = (1 / (2 * z_distance) + y_distance + x_distance)* self.sim.time 
-
-        #if self.sim.pose[2] - self.target_pos[2] <= 1: reward += 10
-
+        x_distance = self.get_distance(self.sim.pose[0], self.target_pos[0])
+        y_distance = self.get_distance(self.sim.pose[1], self.target_pos[1])
+        z_distance = self.get_distance(self.sim.pose[2], self.target_pos[2])
         
+        pref = 0.9
+
+        reward =  pref*(self.sim.time)*z_distance # + (1-pref)*(x_distance + y_distance)        
         return reward
+
+
 
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""
