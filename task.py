@@ -29,11 +29,14 @@ class Task():
     def get_reward(self):
         """Uses current pose of sim to return reward."""
         #reward = 1.-.3*(abs(self.sim.pose[:3] - self.target_pos)).sum()
-        v_distance = abs(self.sim.pose[2] - self.target_pos[2]) + .01
-        h_distance = abs(self.sim.pose[:2] - self.target_pos[:2]).sum() + .01
-        total_velocity = abs(self.sim.v).sum()
 
-        reward = 1/h_distance + 100*(1/v_distance) + 1/total_velocity
+        x_distance = abs(self.sim.pose[0] - self.target_pos[0])
+        y_distance = abs(self.sim.pose[1] - self.target_pos[1])
+        z_distance = abs(self.sim.pose[2] - self.target_pos[2])
+
+
+
+        reward = (1 / (2 * z_distance) + y_distance + x_distance)* self.sim.time 
 
         #if self.sim.pose[2] - self.target_pos[2] <= 1: reward += 10
 
