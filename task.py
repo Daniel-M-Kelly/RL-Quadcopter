@@ -2,6 +2,9 @@ import numpy as np
 import math
 from physics_sim import PhysicsSim
 
+import random
+from collections import namedtuple, deque
+
 class Task():
     """Task (environment) that defines the goal and provides feedback to the agent."""
     def __init__(self, init_pose=None, init_velocities=None, 
@@ -17,35 +20,37 @@ class Task():
         """
         # Simulation
         self.sim = PhysicsSim(init_pose, init_velocities, init_angle_velocities, runtime) 
-        self.action_repeat = 3
+        self.action_repeat = 1
         self.state_size = self.action_repeat * 6
         self.action_low = 0
         self.action_high = 900
         self.action_size = 4
+        self.runtime = runtime
 
         # Goal
-        self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.]) 
+        self.target_pos = target_pos if target_pos is not None else np.array([0., 0., 10.])
 
-    def get_distance(self, pose, target_pos):
-        if abs(pose - target_pos):
-            distance = -np.log2(abs(pose - target_pos)) 
-        else:
-             distance = 0
-       
-        return (distance + target_pos) 
-
-    def get_reward(self):
-        """Uses current pose of sim to return reward."""
-        #reward = 1.-.3*(abs(self.sim.pose[:3] - self.target_pos)).sum()
-
-        x_distance = self.get_distance(self.sim.pose[0], self.target_pos[0])
-        y_distance = self.get_distance(self.sim.pose[1], self.target_pos[1])
-        z_distance = self.get_distance(self.sim.pose[2], self.target_pos[2])
         
-        pref = 0.9
 
-        reward =  pref*(self.sim.time)*z_distance # + (1-pref)*(x_distance + y_distance)        
-        return reward
+
+    def get_reward(self,done):
+        """Uses current pose of sim to return reward."""
+               
+        z_distance = self.target_pos[2] - self.sim.pose[2] 
+        target_distance = self.target_pos[2] - abs(z_distance)
+        e_angles = (abs(self.sim.pose[3]) + abs(self.sim.pose[4]) + abs(self.sim.pose[5]))
+        v_angular = (abs(self.sim.angular_v[0]) + abs(self.sim.angular_v[1]) + abs(self.sim.angular_v[2]))
+        velocity = (abs(self.sim.v[0]) + abs(self.sim.v[1]) + abs(self.sim.v[2]))
+        
+        
+        reward = 10 * self.runtime + target_distance - 2 * v_angular - velocity - e_angles
+        
+        
+        if z_distance > 10:
+            reward += -100
+        
+
+        return reward 
 
 
 
@@ -55,7 +60,7 @@ class Task():
         pose_all = []
         for _ in range(self.action_repeat):
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
-            reward += self.get_reward() 
+            reward += self.get_reward(done) 
             pose_all.append(self.sim.pose)
         next_state = np.concatenate(pose_all)
         return next_state, reward, done
@@ -65,3 +70,5 @@ class Task():
         self.sim.reset()
         state = np.concatenate([self.sim.pose] * self.action_repeat) 
         return state
+    
+
